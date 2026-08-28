@@ -1,0 +1,6 @@
+# Windows shortcuts & archives
+*.lnk
+*.zip
+desktop.ini
+.tmp.*
+Thumbs.db
