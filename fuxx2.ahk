@@ -1,78 +1,3 @@
-# Windows Taskbar Auto-Hide Fix & Smart Toggle (AutoHotkey v2)
-
-<p align="center">
-  <b>English</b> | <a href="#-中文说明">简体中文</a>
-</p>
-
-<p align="center">
-  <a href="https://www.autohotkey.com/"><img src="https://img.shields.io/badge/Language-AutoHotkey%20v2.0+-green.svg" alt="AutoHotkey v2"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-  <a href="https://microsoft.com"><img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6.svg" alt="Platform"></a>
-</p>
-
-> Eliminate Windows auto-hide taskbar bugs, suppress rogue third-party notification popups, and enjoy an effortless immersive experience with **Dual-Condition Hover (`Win + Bottom`)**, **Zero-Interference `Win+Num` App Switching**, and **Mouse-Leave Auto-Dismissal**.
-
----
-
-## 📌 Why This Tool? (The Problem)
-
-Windows built-in **"Automatically hide the taskbar"** is essential for immersive work, gaming, coding, and media consumption. However, Windows taskbar management suffers from critical architectural bugs:
-
-1. **Rogue Notification Popups (Stuck on Screen)**:
-   - Messaging apps (WeChat, QQ, Discord, DingTalk, Telegram) frequently call `NIM_MODIFY` to update tray notifications. This bypasses user auto-hide preferences, forcing `Shell_TrayWnd` to pop up and remain permanently stuck on screen.
-2. **Accidental Bottom-Edge Triggers (Gaming & Dock Apps)**:
-   - When reaching for bottom UI controls in games, video timelines, or IDE status bars, moving the mouse to the screen bottom accidentally pops up the taskbar, stealing clicks.
-3. **Taskbar Collapsing When Dragging Pinned Icons**:
-   - In native Windows, dragging and reordering pinned icons is frustrating because micro-deviations off the taskbar cause it to collapse instantly.
-4. **State De-synchronization & Lockups**:
-   - The taskbar frequently refuses to retract or wake up properly after periods of inactivity.
-
-This lightweight AutoHotkey v2 script (`fuxx2.ahk`) uses low-level Windows API (`User32\ShowWindow`) control, an intelligent 800ms watchdog inspector, and a streamlined state machine to completely solve these issues.
-
----
-
-## 🕹️ `fuxx2.ahk` Core Interaction
-
-| Action | How It Works |
-| :--- | :--- |
-| **Wake Up** | **Hold `Win` key + Move mouse to bottom edge**. Taskbar expands immediately. Release `Win` key, and the taskbar **stays open**! |
-| **Interact / Reorder** | Freely move mouse across the taskbar, click pinned apps, **drag and reorder pinned icons**, or access tray menus. |
-| **Auto-Dismiss** | **Move mouse away from the taskbar**. The taskbar smoothly hides after a 250ms anti-jitter buffer. |
-| **Anti-Accidental Touch** | Moving the mouse to the bottom **WITHOUT** pressing `Win` will **NEVER** reveal the taskbar. |
-| **Fast `Win+1/2/3...` Switching** | Press `Win+Num` anywhere on screen. Apps switch instantaneously with zero focus stealing, and the taskbar auto-retracts 150ms after release. |
-| **Watchdog Suppression** | Background apps popping up rogue notifications are forcibly hidden within 800ms. |
-
----
-
-## ⚙️ Prerequisites (Windows Settings)
-
-For this script to function as intended, **you MUST enable "Automatically hide the taskbar in desktop mode" in Windows Settings**.
-
-### Setup Steps:
-1. Open Windows **Settings** -> **Personalization** -> **Taskbar**.
-2. Toggle **"Automatically hide the taskbar in desktop mode"** to **On**.
-
-![Windows Taskbar Settings](taskbar_settings.png)
-
----
-
-## 🚀 Quick Start
-
-### Requirements
-- Windows 10 / Windows 11 (64-bit)
-- **[AutoHotkey v2.0+](https://www.autohotkey.com/)** (Required: v2 syntax, not compatible with v1)
-
-### Option A: Run `fuxx2.ahk` Directly
-1. Download `fuxx2.ahk`.
-2. Double-click `fuxx2.ahk` to run (automatically requests Admin rights to manage windows over elevated applications).
-
-### Option B: Copy-Paste Full Source Code ("可复制")
-You can directly copy the full source code below into a local `fuxx2.ahk` file:
-
-<details>
-<summary><b>📄 Click to expand and copy full source code (fuxx2.ahk)</b></summary>
-
-```ahk
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
@@ -86,6 +11,14 @@ if not A_IsAdmin {
 
 ; ============================================================
 ; 全局配置与状态（fuxx2：极简双条件悬停保活 + 纯净 Win+1/2/3 路由）
+; 核心交互：
+; 1. 唤醒：按住 Win 键 + 鼠标放到底部 -> 任务栏持续展开显示（此时松开 Win 键也不会缩回）
+; 2. 交互：只要鼠标在任务栏/托盘/右键菜单内，持续保持显示，从容点击或拖拽重排 Pin 图标
+; 3. 收起：鼠标一旦移出任务栏范围 -> 自动平滑隐藏
+; 4. 防误触：鼠标单独划到底部坚决不弹！
+; 5. 快捷键：Win+1/2/3/4... 瞬发切换应用，150ms 自然收起，零焦点干扰
+; 6. 纯净精简：彻底剔除三击 Win 检测与全局鼠标按键 Hook，极低系统开销
+; 7. 稳定性：彻底修复 fuxx9 原始看门狗状态死锁，无需按 Win+1 碰巧解锁
 ; ============================================================
 global g_State := -1             ; 任务栏逻辑状态：-1=未知, 0=隐藏, 1=显示
 global g_HoverActive := false    ; 是否已通过 Win+触底 激活了任务栏鼠标悬停交互会话
@@ -308,7 +241,7 @@ IsMouseInTaskbarArea() {
         }
     }
     
-    ; 3. 白名单类名与进程判定
+    ; 3. 白名单类名与进程判定（系统托盘溢出单、右键上下文菜单、开始菜单等）
     try {
         cClass := WinGetClass(mHwnd)
         rClass := rootHwnd ? WinGetClass(rootHwnd) : ""
@@ -383,53 +316,3 @@ IsMenuOrSearchOpen() {
         DoHide()
     }
 }
-```
-
-</details>
-
-### Auto-start with Windows
-1. Press `Win + R`, type `shell:startup`, and press Enter.
-2. Create a shortcut for `fuxx2.ahk` and paste it into the Startup folder.
-
----
----
-
-## 🇨🇳 中文说明
-
-<p align="center">
-  <a href="#windows-taskbar-auto-hide-fix--smart-toggle-autohotkey-v2">返回顶部 (English)</a>
-</p>
-
-### 📌 解决的痛点
-
-Windows 自带的「自动隐藏任务栏」在全屏办公、打游戏、看视频时能提供极致视野，但在日常使用中存在数个极具破坏性的恶性 Bug：
-
-1. **通知偷弹卡死**：微信/QQ/钉钉等应用刷新通知时强行顶出任务栏并永久卡在最前端。
-2. **底部操作误触**：玩游戏、剪视频拉时间轴或点软件底栏按钮时，光标稍触底边任务栏猛然弹出遮挡操作。
-3. **整理图标频繁崩溃**：拖拽重排 Pin 图标时，光标稍有偏移任务栏立刻收缩导致拖拽中断。
-4. **底层休眠与失步死锁**：长时间不用后状态机卡死，任务栏怎么叫都叫不出来。
-
-本项目通过精简的 Windows API（`User32\ShowWindow`）无焦控制 + 800ms 智能看门狗巡查 + 双条件极简状态机，彻底完美根治！
-
----
-
-### 🕹️ `fuxx2.ahk` 核心特性与交互设计
-
-1. **唤醒：按住 Win 键 + 鼠标放到底部**
-   - 只要两条件同时满足，任务栏瞬间平滑展开；此时**松开 Win 键任务栏也不会缩回**！
-2. **交互：从容拖拽与点击**
-   - 只要鼠标停留在任务栏、Pin 图标、托盘或右键菜单区域内，任务栏持续保持显示。用户可从容**拖拽排序 Pin 图标**或点击托盘。
-3. **收起：鼠标离开即隐**
-   - 鼠标向上移出任务栏后，经过 250ms 防手抖缓冲自动平滑收回隐藏，收放自如。
-4. **单触底绝对防误触**：
-   - 没有按住 Win 键时，鼠标无论怎么划到底边，任务栏坚决不弹！
-5. **秒级 `Win+1/2/3/4...` Pin 软件切换**：
-   - 按下 Win 键瞬间毫秒级显示任务栏（`SW_SHOWNA` 零抢焦），按数字键瞬切软件，松开 150ms 自动隐藏，零延迟零残留。
-6. **800ms 看门狗巡查**：
-   - 后台默默压制第三方软件偷弹，且绝不死锁。
-
----
-
-## 📄 开源许可证
-
-本项目基于 [MIT License](LICENSE) 开源。
